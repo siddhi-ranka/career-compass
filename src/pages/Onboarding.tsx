@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Sparkles, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const domains = [
-  { id: "tech", label: "Technology", icon: "💻" },
-  { id: "data", label: "Data Science", icon: "📊" },
-  { id: "design", label: "Design", icon: "🎨" },
+  { id: "tech", label: "Web Development", icon: "💻" },
+  { id: "data", label: "Data Analytics", icon: "📊" },
+  { id: "design", label: "UI/UX Design", icon: "🎨" },
   { id: "business", label: "Business", icon: "💼" },
-  { id: "marketing", label: "Marketing", icon: "📣" },
+  { id: "marketing", label: "Digital Marketing", icon: "📣" },
   { id: "finance", label: "Finance", icon: "💰" },
 ];
 
@@ -21,8 +22,8 @@ const experienceLevels = [
 ];
 
 const popularSkills: Record<string, string[]> = {
-  tech: ["JavaScript", "Python", "React", "Node.js", "TypeScript", "Git", "SQL", "AWS"],
-  data: ["Python", "SQL", "Machine Learning", "Pandas", "Statistics", "TensorFlow", "Power BI", "R"],
+  tech: ["HTML", "CSS", "JavaScript", "React", "Node.js", "TypeScript", "Git", "Python"],
+  data: ["Excel", "SQL", "Python", "Pandas", "Statistics", "Power BI", "Tableau", "R"],
   design: ["Figma", "Adobe XD", "Sketch", "UI Design", "UX Research", "Prototyping", "Illustrator", "Photoshop"],
   business: ["Project Management", "Excel", "Communication", "Leadership", "Strategy", "Agile", "Negotiation", "Analytics"],
   marketing: ["SEO", "Content Writing", "Social Media", "Google Analytics", "Email Marketing", "PPC", "Copywriting", "Branding"],
@@ -46,6 +47,7 @@ const OnboardingPage = () => {
     experience: "",
     domain: "",
     skills: [] as string[],
+    noSkills: false,
     targetRole: "",
   });
 
@@ -55,7 +57,9 @@ const OnboardingPage = () => {
     if (step < totalSteps) {
       setStep(step + 1);
     } else {
-      // Navigate to dashboard
+      // Save user data and navigate to dashboard
+      localStorage.setItem("skillpath_onboarding", JSON.stringify(formData));
+      toast.success("Your SkillPath is ready!");
       navigate("/dashboard");
     }
   };
@@ -67,11 +71,28 @@ const OnboardingPage = () => {
   };
 
   const toggleSkill = (skill: string) => {
+    if (formData.noSkills) {
+      setFormData((prev) => ({
+        ...prev,
+        noSkills: false,
+        skills: [skill],
+      }));
+      return;
+    }
+    
     setFormData((prev) => ({
       ...prev,
       skills: prev.skills.includes(skill)
         ? prev.skills.filter((s) => s !== skill)
         : [...prev.skills, skill],
+    }));
+  };
+
+  const handleNoSkills = () => {
+    setFormData((prev) => ({
+      ...prev,
+      noSkills: true,
+      skills: [],
     }));
   };
 
@@ -84,7 +105,7 @@ const OnboardingPage = () => {
       case 3:
         return formData.domain.length > 0;
       case 4:
-        return formData.skills.length > 0;
+        return formData.skills.length > 0 || formData.noSkills;
       case 5:
         return formData.targetRole.length > 0;
       default:
@@ -188,12 +209,12 @@ const OnboardingPage = () => {
                 transition={{ duration: 0.3 }}
               >
                 <h2 className="text-2xl font-bold font-heading mb-2">Choose your domain</h2>
-                <p className="text-muted-foreground mb-6">Select the field you're interested in.</p>
+                <p className="text-muted-foreground mb-6">Select the field you want to build a career in.</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {domains.map((domain) => (
                     <button
                       key={domain.id}
-                      onClick={() => setFormData({ ...formData, domain: domain.id, skills: [], targetRole: "" })}
+                      onClick={() => setFormData({ ...formData, domain: domain.id, skills: [], noSkills: false, targetRole: "" })}
                       className={`p-4 rounded-xl border text-center transition-all ${
                         formData.domain === domain.id
                           ? "border-primary bg-primary/10"
@@ -217,8 +238,39 @@ const OnboardingPage = () => {
                 transition={{ duration: 0.3 }}
               >
                 <h2 className="text-2xl font-bold font-heading mb-2">What skills do you have?</h2>
-                <p className="text-muted-foreground mb-6">Select all that apply.</p>
-                <div className="flex flex-wrap gap-2">
+                <p className="text-muted-foreground mb-6">Select all that apply, or start fresh if you're a beginner.</p>
+                
+                {/* None / Just Starting option */}
+                <button
+                  onClick={handleNoSkills}
+                  className={`w-full p-4 rounded-xl border text-left transition-all mb-4 ${
+                    formData.noSkills
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-secondary/50 hover:border-muted-foreground"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <HelpCircle className={`w-5 h-5 ${formData.noSkills ? "text-primary" : "text-muted-foreground"}`} />
+                    <div>
+                      <div className="font-medium text-foreground">None / Just Starting</div>
+                      <div className="text-sm text-muted-foreground">I'm an absolute beginner</div>
+                    </div>
+                    {formData.noSkills && (
+                      <Check className="w-5 h-5 text-primary ml-auto" />
+                    )}
+                  </div>
+                </button>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-border"></div>
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="bg-card px-3 text-sm text-muted-foreground">or select skills</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2 mt-4">
                   {(popularSkills[formData.domain] || popularSkills.tech).map((skill) => (
                     <button
                       key={skill}
@@ -234,7 +286,7 @@ const OnboardingPage = () => {
                   ))}
                 </div>
                 <p className="text-sm text-muted-foreground mt-4">
-                  Selected: {formData.skills.length} skills
+                  {formData.noSkills ? "Starting from scratch - we'll guide you!" : `Selected: ${formData.skills.length} skills`}
                 </p>
               </motion.div>
             )}
