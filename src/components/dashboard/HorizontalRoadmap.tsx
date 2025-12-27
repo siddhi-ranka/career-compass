@@ -1,15 +1,20 @@
-import { motion } from "framer-motion";
-import { Check, Clock, Lock } from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Check, Clock, Lock, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { RoadmapSkill } from "@/data/roadmaps";
+import { Checkbox } from "@/components/ui/checkbox";
+import type { RoadmapSkill, SubTopic } from "@/data/roadmaps";
 
 interface HorizontalRoadmapProps {
   skills: RoadmapSkill[];
   domainLabel: string;
   onMarkComplete: (skillId: string) => void;
+  onSubTopicToggle: (skillId: string, subTopicId: string) => void;
 }
 
-const HorizontalRoadmap = ({ skills, domainLabel, onMarkComplete }: HorizontalRoadmapProps) => {
+const HorizontalRoadmap = ({ skills, domainLabel, onMarkComplete, onSubTopicToggle }: HorizontalRoadmapProps) => {
+  const [expandedSkill, setExpandedSkill] = useState<string | null>(null);
+
   const getStatusStyles = (status: string) => {
     switch (status) {
       case "completed":
@@ -52,12 +57,21 @@ const HorizontalRoadmap = ({ skills, domainLabel, onMarkComplete }: HorizontalRo
     }
   };
 
+  const handleSkillClick = (skillId: string, status: string) => {
+    if (status === "locked") return;
+    setExpandedSkill(expandedSkill === skillId ? null : skillId);
+  };
+
+  const getCompletedSubTopics = (skill: RoadmapSkill) => {
+    return skill.subTopics.filter(st => st.completed).length;
+  };
+
   return (
     <div className="w-full">
       {/* Domain label */}
       <div className="mb-6">
         <h3 className="text-xl font-semibold font-heading text-foreground">{domainLabel} Roadmap</h3>
-        <p className="text-sm text-muted-foreground">Complete skills from left to right</p>
+        <p className="text-sm text-muted-foreground">Click on a skill to see what you'll learn</p>
       </div>
 
       {/* Horizontal scrollable roadmap */}
@@ -66,6 +80,9 @@ const HorizontalRoadmap = ({ skills, domainLabel, onMarkComplete }: HorizontalRo
           {skills.map((skill, index) => {
             const styles = getStatusStyles(skill.status);
             const isLast = index === skills.length - 1;
+            const isExpanded = expandedSkill === skill.id;
+            const completedSubTopics = getCompletedSubTopics(skill);
+            const totalSubTopics = skill.subTopics.length;
 
             return (
               <motion.div
@@ -76,7 +93,7 @@ const HorizontalRoadmap = ({ skills, domainLabel, onMarkComplete }: HorizontalRo
                 className="flex items-start"
               >
                 {/* Skill card with circle */}
-                <div className="flex flex-col items-center w-40">
+                <div className="flex flex-col items-center w-44">
                   {/* Circle */}
                   <div
                     className={`w-12 h-12 rounded-full border-2 flex items-center justify-center mb-3 transition-all ${styles.circle}`}
@@ -86,28 +103,54 @@ const HorizontalRoadmap = ({ skills, domainLabel, onMarkComplete }: HorizontalRo
 
                   {/* Card */}
                   <div
-                    className={`w-full p-4 rounded-xl border transition-all ${styles.card}`}
+                    onClick={() => handleSkillClick(skill.id, skill.status)}
+                    className={`w-full p-4 rounded-xl border transition-all cursor-pointer hover:scale-[1.02] ${styles.card} ${skill.status === "locked" ? "cursor-not-allowed" : ""}`}
                   >
-                    <h4 className="font-semibold font-heading text-foreground text-center mb-1">
-                      {skill.name}
-                    </h4>
-                    <p className="text-xs text-muted-foreground text-center mb-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className="font-semibold font-heading text-foreground">
+                        {skill.name}
+                      </h4>
+                      {skill.status !== "locked" && (
+                        isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-2">
                       {skill.description}
                     </p>
-                    <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-3">
-                      <Clock className="w-3 h-3" />
-                      <span>{skill.duration}</span>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        <span>{skill.duration}</span>
+                      </div>
+                      {skill.status !== "locked" && (
+                        <span className="text-primary font-medium">
+                          {completedSubTopics}/{totalSubTopics}
+                        </span>
+                      )}
                     </div>
 
-                    {skill.status === "current" && (
+                    {skill.status === "current" && completedSubTopics === totalSubTopics && (
                       <Button
                         variant="default"
                         size="sm"
                         className="w-full text-xs"
-                        onClick={() => onMarkComplete(skill.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onMarkComplete(skill.id);
+                        }}
                       >
+                        <Check className="w-3 h-3 mr-1" />
                         Mark Complete
                       </Button>
+                    )}
+
+                    {skill.status === "current" && completedSubTopics < totalSubTopics && (
+                      <div className="w-full h-1.5 bg-secondary rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-primary rounded-full transition-all"
+                          style={{ width: `${(completedSubTopics / totalSubTopics) * 100}%` }}
+                        />
+                      </div>
                     )}
 
                     {skill.status === "completed" && (
@@ -138,6 +181,60 @@ const HorizontalRoadmap = ({ skills, domainLabel, onMarkComplete }: HorizontalRo
           })}
         </div>
       </div>
+
+      {/* Expanded sub-topics */}
+      <AnimatePresence>
+        {expandedSkill && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            className="mt-6 overflow-hidden"
+          >
+            {skills
+              .filter((s) => s.id === expandedSkill)
+              .map((skill) => (
+                <div key={skill.id} className="bg-secondary/30 border border-border rounded-xl p-6">
+                  <h4 className="text-lg font-semibold font-heading text-foreground mb-2">
+                    What you'll learn in {skill.name}
+                  </h4>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Complete each topic to master this skill. Check off items as you learn them.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {skill.subTopics.map((subTopic) => (
+                      <div
+                        key={subTopic.id}
+                        className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                          subTopic.completed
+                            ? "bg-emerald-500/10 border-emerald-500/30"
+                            : "bg-background border-border hover:border-primary/30"
+                        }`}
+                      >
+                        <Checkbox
+                          id={subTopic.id}
+                          checked={subTopic.completed}
+                          onCheckedChange={() => onSubTopicToggle(skill.id, subTopic.id)}
+                          disabled={skill.status === "locked"}
+                          className="data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
+                        />
+                        <label
+                          htmlFor={subTopic.id}
+                          className={`text-sm cursor-pointer flex-1 ${
+                            subTopic.completed ? "text-emerald-600 line-through" : "text-foreground"
+                          }`}
+                        >
+                          {subTopic.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

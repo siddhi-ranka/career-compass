@@ -4,33 +4,34 @@ import {
   Map, 
   MessageCircle, 
   Trophy, 
-  FileText,
   Sparkles,
-  Settings,
   LogOut,
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
+
+interface DashboardSidebarProps {
+  activeSection: string;
+  onSectionChange: (section: string) => void;
+}
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Overview", href: "/dashboard" },
-  { icon: Map, label: "My Roadmap", href: "/dashboard/roadmap" },
-  { icon: MessageCircle, label: "AI Mentor", href: "/dashboard/mentor" },
-  { icon: Trophy, label: "Achievements", href: "/dashboard/achievements" },
-  { icon: FileText, label: "Resume", href: "/dashboard/resume" },
+  { icon: LayoutDashboard, label: "Overview", section: "overview" },
+  { icon: Map, label: "My Roadmap", section: "roadmap" },
+  { icon: MessageCircle, label: "AI Mentor", section: "mentor" },
+  { icon: Trophy, label: "Achievements", section: "achievements" },
 ];
 
-const DashboardSidebar = () => {
+const DashboardSidebar = ({ activeSection, onSectionChange }: DashboardSidebarProps) => {
   const [collapsed, setCollapsed] = useState(false);
-  const location = useLocation();
 
   return (
     <motion.aside
       initial={{ x: -20, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
-      className={`h-screen bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 ${
+      className={`h-screen bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 sticky top-0 ${
         collapsed ? "w-20" : "w-64"
       }`}
     >
@@ -49,12 +50,12 @@ const DashboardSidebar = () => {
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1">
         {menuItems.map((item) => {
-          const isActive = location.pathname === item.href;
+          const isActive = activeSection === item.section;
           return (
-            <Link
+            <button
               key={item.label}
-              to={item.href}
-              className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${
+              onClick={() => onSectionChange(item.section)}
+              className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${
                 isActive
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
                   : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
@@ -62,21 +63,20 @@ const DashboardSidebar = () => {
             >
               <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? "text-sidebar-primary" : ""}`} />
               {!collapsed && <span className="font-medium">{item.label}</span>}
-            </Link>
+            </button>
           );
         })}
       </nav>
 
       {/* Bottom actions */}
       <div className="p-3 border-t border-sidebar-border space-y-1">
-        <Link
-          to="/dashboard/settings"
-          className="flex items-center gap-3 px-3 py-3 rounded-xl text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-all"
+        <button 
+          onClick={() => {
+            localStorage.removeItem("skillpath_onboarding");
+            window.location.href = "/";
+          }}
+          className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-all"
         >
-          <Settings className="w-5 h-5 flex-shrink-0" />
-          {!collapsed && <span className="font-medium">Settings</span>}
-        </Link>
-        <button className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-all">
           <LogOut className="w-5 h-5 flex-shrink-0" />
           {!collapsed && <span className="font-medium">Logout</span>}
         </button>
