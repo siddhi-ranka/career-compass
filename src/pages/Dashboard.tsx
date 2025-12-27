@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   TrendingUp, 
   Clock, 
@@ -33,6 +35,15 @@ const DashboardPage = () => {
   const roadmapRef = useRef<HTMLDivElement>(null);
   const mentorRef = useRef<HTMLDivElement>(null);
   const achievementsRef = useRef<HTMLDivElement>(null);
+
+  const navigate = useNavigate();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/");
+    }
+  }, [user, loading, navigate]);
 
   useEffect(() => {
     // Load user data from localStorage
@@ -94,7 +105,8 @@ const DashboardPage = () => {
     });
   };
 
-  const handleMarkComplete = (skillId: string) => {
+  const handleMarkComplete = async (skillId: string) => {
+    // Optimistic update
     setRoadmapSkills((prev) => {
       const updatedSkills = prev.map((skill, index) => {
         if (skill.id === skillId) {
@@ -117,6 +129,25 @@ const DashboardPage = () => {
 
     setCompletedCount((prev) => prev + 1);
     toast.success("Skill completed! Keep going! 🎉");
+
+    // Call analysis endpoint to get feedback/score when marking complete
+    try {
+      const backendUrl = (import.meta.env.VITE_BACKEND_URL as string) || "http://localhost:4000";
+      const skill = roadmapSkills.find(s => s.id === skillId);
+      const resp = await fetch(`${backendUrl}/api/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain: userData?.domain || 'general', question: skill?.name || skillId, userAnswer: 'completed' }),
+      });
+      const json = await resp.json();
+
+      if (json.success && json.data) {
+        // Attach analysis to the completed skill in storage
+        setRoadmapSkills((prev) => prev.map((s) => s.id === skillId ? { ...s, analysis: json.data } as any : s));
+      }
+    } catch (err) {
+      console.error('Analysis error:', err);
+    }
   };
 
   const totalSkills = roadmapSkills.length;

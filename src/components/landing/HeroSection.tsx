@@ -1,11 +1,35 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles, Target, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import AuthModal from "@/components/auth/AuthModal";
 
 const HeroSection = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<"signin" | "signup">("signup");
+  const location = useLocation();
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const authParam = params.get("auth");
+    if (authParam === "signup" || authParam === "signin") {
+      setModalMode(authParam as "signin" | "signup");
+      setIsAuthOpen(true);
+    }
+  }, [location.search, navigate, location.pathname]);
+
+  const handleModalClose = () => {
+    setIsAuthOpen(false);
+    const params = new URLSearchParams(location.search);
+    if (params.has("auth")) {
+      params.delete("auth");
+      const newSearch = params.toString() ? `?${params.toString()}` : "";
+      navigate(`${location.pathname}${newSearch}`, { replace: true });
+    }
+  };
 
   return (
     <>
@@ -72,7 +96,7 @@ const HeroSection = () => {
                 variant="hero" 
                 size="xl" 
                 className="group"
-                onClick={() => setIsAuthOpen(true)}
+                onClick={() => { setModalMode("signup"); setIsAuthOpen(true); }}
               >
                 Get Started Free
                 <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
@@ -80,7 +104,7 @@ const HeroSection = () => {
               <Button 
                 variant="heroOutline" 
                 size="xl"
-                onClick={() => setIsAuthOpen(true)}
+                onClick={() => { setModalMode("signin"); setIsAuthOpen(true); }}
               >
                 Sign In
               </Button>
@@ -131,7 +155,7 @@ const HeroSection = () => {
         </motion.div>
       </section>
 
-      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+      <AuthModal isOpen={isAuthOpen} onClose={handleModalClose} initialMode={modalMode} />
     </>
   );
 };

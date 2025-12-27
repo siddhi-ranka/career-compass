@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, Check, Sparkles, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 const domains = [
   { id: "tech", label: "Web Development", icon: "💻" },
@@ -41,6 +42,7 @@ const targetRoles: Record<string, string[]> = {
 
 const OnboardingPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     name: "",
@@ -51,17 +53,46 @@ const OnboardingPage = () => {
     targetRole: "",
   });
 
+  // Load draft from localStorage (if the user was redirected to signup)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("skillpath_onboarding_draft");
+      if (raw) {
+        const draft = JSON.parse(raw);
+        setFormData((prev) => ({ ...prev, ...draft }));
+      }
+    } catch (e) {
+      console.error("Failed to load onboarding draft", e);
+    }
+  }, []);
+
   const totalSteps = 5;
 
   const handleNext = () => {
     if (step < totalSteps) {
       setStep(step + 1);
-    } else {
-      // Save user data and navigate to dashboard
-      localStorage.setItem("skillpath_onboarding", JSON.stringify(formData));
-      toast.success("Your SkillPath is ready!");
-      navigate("/dashboard");
+      return;
     }
+
+    // Final step: if user is not authenticated, save a draft and redirect to signup
+    if (!user) {
+      try {
+        localStorage.setItem("skillpath_onboarding_draft", JSON.stringify(formData));
+      } catch (e) {
+        console.error("Failed to save onboarding draft", e);
+      }
+      toast("Please create an account to save and view your SkillPath", { type: "info" });
+      // Navigate to home with auth=signup so the modal opens
+      navigate("/?auth=signup");
+      return;
+    }
+
+    // Authenticated: finalize and proceed
+    localStorage.setItem("skillpath_onboarding", JSON.stringify(formData));
+    // remove any draft
+    localStorage.removeItem("skillpath_onboarding_draft");
+    toast.success("Your SkillPath is ready!");
+    navigate("/dashboard");
   };
 
   const handleBack = () => {

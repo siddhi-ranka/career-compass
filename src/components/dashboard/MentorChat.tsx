@@ -78,15 +78,44 @@ const MentorChat = ({ domain, currentSkill, completedSkills = [], progressPercen
     setInput("");
     setIsTyping(true);
 
-    setTimeout(() => {
+    try {
+      const backendUrl = (import.meta.env.VITE_BACKEND_URL as string) || "http://localhost:4000";
+      const resp = await fetch(`${backendUrl}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain: domain || "general", question: userInput }),
+      });
+      const json = await resp.json();
+
+      let content = "";
+      if (json.success && json.data) {
+        if (json.data.answer) content = json.data.answer;
+        else content = typeof json.data === "string" ? json.data : JSON.stringify(json.data);
+      } else if (json.data && typeof json.data === "string") {
+        content = json.data;
+      } else if (json.error) {
+        content = `Error: ${json.error}`;
+      } else {
+        content = getContextualResponse(userInput); // fallback
+      }
+
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: getContextualResponse(userInput),
+        content,
       };
       setMessages((prev) => [...prev, aiMessage]);
+    } catch (err) {
+      console.error("Chat error:", err);
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: "Sorry, I'm having trouble reaching the AI service right now. Please try again later.",
+      };
+      setMessages((prev) => [...prev, aiMessage]);
+    } finally {
       setIsTyping(false);
-    }, 1000);
+    }
   };
 
   return (

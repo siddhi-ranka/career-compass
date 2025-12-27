@@ -154,9 +154,22 @@ const HorizontalRoadmap = ({ skills, domainLabel, onMarkComplete, onSubTopicTogg
                     )}
 
                     {skill.status === "completed" && (
-                      <div className="flex items-center justify-center gap-1 text-xs text-emerald-500">
-                        <Check className="w-3 h-3" />
-                        <span>Completed</span>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-center gap-1 text-xs text-emerald-500">
+                          <Check className="w-3 h-3" />
+                          <span>Completed</span>
+                        </div>
+                        {(
+                          // @ts-ignore - analysis is optional and added at runtime
+                          skill.analysis
+                        ) && (
+                          <div className="mt-2 text-xs text-muted-foreground bg-emerald-50 rounded-md p-2">
+                            {/* @ts-ignore */}
+                            <div><strong>Score:</strong> {(skill.analysis as any).score ?? 'N/A'}</div>
+                            {/* @ts-ignore */}
+                            <div className="truncate"><strong>Feedback:</strong> {(skill.analysis as any).feedback ?? ''}</div>
+                          </div>
+                        )}
                       </div>
                     )}
 

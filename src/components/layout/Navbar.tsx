@@ -4,6 +4,68 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
 import skillpathLogo from "@/assets/skillpath-logo.jpeg";
+import { useAuth } from "@/hooks/useAuth";
+import { signOut } from "firebase/auth";
+import { auth } from "@/firebase"; // firebase auth instance
+
+// Desktop auth actions component
+const DesktopAuthActions = () => {
+  const { user } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.error('Sign out error', e);
+    }
+  };
+
+  if (user) {
+    return (
+      <div className="flex items-center gap-2">
+        <Link to="/dashboard">
+          <Button variant="ghost" size="sm">{user.displayName || user.email?.split('@')[0]}</Button>
+        </Link>
+        <Button variant="default" size="sm" onClick={handleSignOut}>Sign Out</Button>
+      </div>
+    );
+  }
+
+  return (
+    <Link to="/?auth=signup">
+      <Button variant="default" size="sm">Get Started</Button>
+    </Link>
+  );
+};
+
+const MobileAuthActions = () => {
+  const { user } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.error('Sign out error', e);
+    }
+  };
+
+  if (user) {
+    return (
+      <div className="flex flex-col gap-2">
+        <Link to="/dashboard" onClick={() => {}}>
+          <Button variant="ghost" size="sm" className="w-full">{user.displayName || user.email?.split('@')[0]}</Button>
+        </Link>
+        <Button variant="default" size="sm" className="w-full" onClick={handleSignOut}>Sign Out</Button>
+      </div>
+    );
+  }
+
+  return (
+    <Link to="/onboarding" onClick={() => {}}>
+      <Button variant="default" size="sm" className="w-full">Get Started</Button>
+    </Link>
+  );
+};
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -75,11 +137,9 @@ const Navbar = () => {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
-            <Link to="/onboarding">
-              <Button variant="default" size="sm">
-                Get Started
-              </Button>
-            </Link>
+            {/* Show user if signed in */}
+            {/**/}
+            <DesktopAuthActions />
           </div>
 
           {/* Mobile Menu Button */}
@@ -129,11 +189,16 @@ const Navbar = () => {
                     </Link>
                   )
                 ))}
-                <Link to="/onboarding" onClick={() => setIsOpen(false)}>
+                <Link to="/?auth=signup" onClick={() => setIsOpen(false)}>
                   <Button variant="default" size="sm" className="w-full">
                     Get Started
                   </Button>
                 </Link>
+
+                {/* Mobile auth actions */}
+                <div className="mt-2">
+                  <MobileAuthActions />
+                </div>
               </div>
             </motion.div>
           )}

@@ -1,14 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Eye, EyeOff, Mail, User, Lock, Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/firebase";
+import { auth } from "@/firebase";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialMode?: "signin" | "signup";
 }
 
 interface FormErrors {
@@ -17,9 +22,14 @@ interface FormErrors {
   password?: string;
 }
 
-const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
+const AuthModal = ({ isOpen, onClose, initialMode }: AuthModalProps) => {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signup");
+  const [mode, setMode] = useState<"signin" | "signup">(() => initialMode ?? "signup");
+
+  useEffect(() => {
+    // When modal opens, respect the requested initial mode (signin/signup)
+    if (isOpen && initialMode) setMode(initialMode);
+  }, [isOpen, initialMode]);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -28,6 +38,14 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
     password: "",
   });
   const [errors, setErrors] = useState<FormErrors>({});
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -48,10 +66,14 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
       newErrors.email = "Please enter a valid email address";
     }
 
-    if (!formData.password) {
+    const password = formData.password || "";
+    const passwordRegex = /(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9])/; // letter, number, special
+    if (!password) {
       newErrors.password = "Password is required";
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
+    } else if (password.length < 5) {
+      newErrors.password = "Password must be at least 5 characters";
+    } else if (!passwordRegex.test(password)) {
+      newErrors.password = "Password must include a letter, a number, and a special character (e.g., @)";
     }
 
     setErrors(newErrors);
@@ -60,40 +82,97 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setIsLoading(true);
 
-    // Simulate auth process
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.success(mode === "signup" ? "Account created successfully!" : "Welcome back!");
-      
-      // Store user data in localStorage for demo
-      localStorage.setItem("skillpath_user", JSON.stringify({
-        username: formData.username || "User",
-        email: formData.email,
-      }));
-      
+    try {
+      if (mode === "signup") {
+        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+
+        const displayName = formData.username.trim() || userCredential.user.displayName || "User";
+
+        // Fire-and-forget: update profile and persist to Firestore without blocking the main flow
+        (async () => {
+          try {
+            if (formData.username.trim()) {
+              await updateProfile(userCredential.user, { displayName: formData.username.trim() });
+            }
+          } catch (e) {
+            console.error("Profile update error", e);
+          }
+
+          try {
+            await setDoc(doc(db, "users", userCredential.user.uid), {
+              uid: userCredential.user.uid,
+              displayName,
+              email: userCredential.user.email,
+              createdAt: serverTimestamp(),
+            }, { merge: true });
+          } catch (e) {
+            console.error('Firestore user write error', e);
+          }
+        })();
+
+        toast.success("Account created successfully!");
+        localStorage.setItem("skillpath_user", JSON.stringify({
+          username: displayName,
+          email: userCredential.user.email,
+          uid: userCredential.user.uid,
+        }));
+      } else {
+        const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+        toast.success("Welcome back!");
+        localStorage.setItem("skillpath_user", JSON.stringify({
+          username: userCredential.user.displayName || formData.username || "User",
+          email: userCredential.user.email,
+          uid: userCredential.user.uid,
+        }));
+      }
+
       onClose();
       navigate("/onboarding");
-    }, 1500);
+    } catch (error: any) {
+      console.error("Auth error:", error);
+      const code = error?.code || "";
+
+      // Helpful message when Firebase API key is not configured correctly
+      const msg = (error?.message || "").toLowerCase();
+      if (msg.includes("api key") || msg.includes("api-key") || msg.includes("invalid api key")) {
+        toast.error("Firebase API key is invalid or missing. Please set VITE_FIREBASE_API_KEY in your .env and restart the dev server.");
+      } else if (code === "auth/email-already-in-use") {
+        toast.error("Email already in use.");
+      } else if (code === "auth/wrong-password" || code === "auth/user-not-found") {
+        toast.error("Invalid email or password.");
+      } else if (code === "auth/weak-password") {
+        toast.error("Password is too weak — it must be at least 5 characters and include a letter, a number, and a special character.");
+      } else {
+        toast.error(error?.message || "Authentication error. Please try again.");
+      }
+    } finally {
+      if (isMounted.current) setIsLoading(false);
+    }
   };
 
   const isFormValid = () => {
+    const password = formData.password || "";
+    const passwordRegex = /(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9])/;
+
     if (mode === "signup") {
       return (
         formData.username.trim().length >= 3 &&
         formData.email.length >= 13 &&
         /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) &&
-        formData.password.length >= 6
+        password.length >= 5 &&
+        passwordRegex.test(password)
       );
     }
     return (
       formData.email.length >= 13 &&
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) &&
-      formData.password.length >= 6
+      password.length >= 5 &&
+      passwordRegex.test(password)
     );
   };
 
@@ -199,7 +278,7 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
+                    placeholder="Enter password (min 5 chars, include letter, number & special)"
                   value={formData.password}
                   onChange={(e) => handleInputChange("password", e.target.value)}
                   className={`pl-11 pr-11 ${errors.password ? "border-destructive" : ""}`}
