@@ -22,7 +22,7 @@ const Navbar = () => {
   const navLinks = [
     { label: "Features", href: "/#features" },
     { label: "How It Works", href: "/#how-it-works" },
-    { label: "Dashboard", href: "/#features" },
+    { label: "Dashboard", href: "/dashboard" },
   ];
 
   const isActive = (href: string) => {
@@ -40,10 +40,7 @@ const Navbar = () => {
         <div className="glass rounded-2xl px-6 py-3 flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full overflow-hidden bg-background border border-border">
-              <img src={skillpathLogo} alt="SkillPath" className="w-full h-full object-cover object-[25%_center]" />
-            </div>
-            <span className="text-xl font-bold font-heading text-foreground">SkillPath</span>
+            <img src={skillpathLogo} alt="SkillPath" className="h-10 w-auto" />
           </Link>
 
           {/* Desktop Navigation */}
