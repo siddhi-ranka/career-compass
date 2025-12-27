@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Eye, EyeOff, Mail, User, Lock, Loader2 } from "lucide-react";
+import { X, Eye, EyeOff, Mail, User, Lock, Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
@@ -126,6 +126,13 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
         >
           {/* Header */}
           <div className="relative px-6 pt-6 pb-4 border-b border-border">
+            <button
+              onClick={onClose}
+              className="absolute left-4 top-4 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center gap-1"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="text-sm">Back</span>
+            </button>
             <button
               onClick={onClose}
               className="absolute right-4 top-4 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
