@@ -48,9 +48,6 @@ const HowItWorksSection = () => {
         </motion.div>
 
         <div className="relative max-w-5xl mx-auto">
-          {/* Connection line */}
-          <div className="absolute top-24 left-8 right-8 h-0.5 bg-gradient-to-r from-primary via-accent to-primary hidden lg:block" />
-
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {steps.map((step, index) => (
               <motion.div

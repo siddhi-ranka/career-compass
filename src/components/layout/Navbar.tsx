@@ -1,12 +1,23 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Sparkles } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
+import skillpathLogo from "@/assets/skillpath-logo.jpeg";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+
+  const handleScrollToSection = (href: string) => {
+    if (href.startsWith("/#")) {
+      const sectionId = href.replace("/#", "");
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  };
 
   const navLinks = [
     { label: "Features", href: "/#features" },
@@ -29,24 +40,33 @@ const Navbar = () => {
         <div className="glass rounded-2xl px-6 py-3 flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold font-heading text-foreground">SkillPath</span>
+            <img src={skillpathLogo} alt="SkillPath" className="h-10 w-auto" />
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => (
-              <Link
-                key={link.label}
-                to={link.href}
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  isActive(link.href) ? "text-primary" : "text-muted-foreground"
-                }`}
-              >
-                {link.label}
-              </Link>
+              link.href.startsWith("/#") ? (
+                <button
+                  key={link.label}
+                  onClick={() => handleScrollToSection(link.href)}
+                  className={`text-sm font-medium transition-colors hover:text-primary ${
+                    isActive(link.href) ? "text-primary" : "text-muted-foreground"
+                  }`}
+                >
+                  {link.label}
+                </button>
+              ) : (
+                <Link
+                  key={link.label}
+                  to={link.href}
+                  className={`text-sm font-medium transition-colors hover:text-primary ${
+                    isActive(link.href) ? "text-primary" : "text-muted-foreground"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              )
             ))}
           </div>
 
@@ -80,16 +100,31 @@ const Navbar = () => {
             >
               <div className="flex flex-col gap-4">
                 {navLinks.map((link) => (
-                  <Link
-                    key={link.label}
-                    to={link.href}
-                    onClick={() => setIsOpen(false)}
-                    className={`text-sm font-medium transition-colors hover:text-primary py-2 ${
-                      isActive(link.href) ? "text-primary" : "text-muted-foreground"
-                    }`}
-                  >
-                    {link.label}
-                  </Link>
+                  link.href.startsWith("/#") ? (
+                    <button
+                      key={link.label}
+                      onClick={() => {
+                        handleScrollToSection(link.href);
+                        setIsOpen(false);
+                      }}
+                      className={`text-sm font-medium transition-colors hover:text-primary py-2 text-left ${
+                        isActive(link.href) ? "text-primary" : "text-muted-foreground"
+                      }`}
+                    >
+                      {link.label}
+                    </button>
+                  ) : (
+                    <Link
+                      key={link.label}
+                      to={link.href}
+                      onClick={() => setIsOpen(false)}
+                      className={`text-sm font-medium transition-colors hover:text-primary py-2 ${
+                        isActive(link.href) ? "text-primary" : "text-muted-foreground"
+                      }`}
+                    >
+                      {link.label}
+                    </Link>
+                  )
                 ))}
                 <Link to="/onboarding" onClick={() => setIsOpen(false)}>
                   <Button variant="default" size="sm" className="w-full">
