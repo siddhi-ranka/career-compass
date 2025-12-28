@@ -1,7 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { predict, buildAnswerPrompt, buildAnalysisPrompt } = require('./geminiClient');
+// Generative model integration removed — stubbed endpoints below.
+// If you want to re-enable, re-add a client that exports predict/buildAnswerPrompt/buildAnalysisPrompt
+// const { predict, buildAnswerPrompt, buildAnalysisPrompt } = require('./geminiClient');
 
 // Optional Firebase Admin initialization if credentials supplied
 let admin = null;
@@ -31,64 +33,17 @@ app.use(express.json());
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 app.post('/api/chat', async (req, res) => {
-  const { domain, question, sessionId, userId } = req.body;
-  if (!question || !domain) return res.status(400).json({ success: false, message: 'domain and question required' });
-
-  try {
-    const prompt = buildAnswerPrompt(domain, question);
-    const text = await predict(prompt);
-
-    // Try to parse JSON response (recommended prompt asks for JSON only)
-    let parsed;
-    try {
-      parsed = JSON.parse(text);
-    } catch (e) {
-      parsed = { answer: text };
-    }
-
-    return res.json({ success: true, data: parsed });
-  } catch (err) {
-    console.error('Error in /api/chat', err);
-    return res.status(500).json({ success: false, error: err.message || String(err) });
-  }
+  // Generative chat endpoint removed. This repository no longer uses external generative APIs.
+  return res.status(501).json({ success: false, message: 'Generative chat endpoint removed' });
 });
 
-// Test model endpoint: useful for verifying generative API integration
+// Generative endpoints removed. They are stubbed to return 501 Not Implemented so the server runs without external AI integration.
 app.post('/api/test-model', async (req, res) => {
-  const { prompt } = req.body;
-  if (!prompt) return res.status(400).json({ success: false, message: 'prompt required' });
-
-  try {
-    const text = await predict(prompt);
-    return res.json({ success: true, raw: text });
-  } catch (err) {
-    console.error('Error in /api/test-model', err);
-    return res.status(500).json({ success: false, error: err.message || String(err) });
-  }
+  return res.status(501).json({ success: false, message: 'Generative test-model endpoint removed' });
 });
 
 app.post('/api/analyze', async (req, res) => {
-  const { domain, question, userAnswer } = req.body;
-  if (!domain || !question || userAnswer === undefined) return res.status(400).json({ success: false, message: 'domain, question and userAnswer required' });
-
-  try {
-    const prompt = buildAnalysisPrompt(domain, question, userAnswer);
-    const text = await predict(prompt);
-
-    let parsed;
-    try {
-      parsed = JSON.parse(text);
-      // Basic validation
-      if (typeof parsed.score !== 'number') parsed.score = parsed.score ? Number(parsed.score) : null;
-    } catch (e) {
-      parsed = { analysis: text };
-    }
-
-    return res.json({ success: true, data: parsed });
-  } catch (err) {
-    console.error('Error in /api/analyze', err);
-    return res.status(500).json({ success: false, error: err.message || String(err) });
-  }
+  return res.status(501).json({ success: false, message: 'Generative analyze endpoint removed' });
 });
 
 // Admin: create user using Firebase Admin (for testing only). Requires service account file or base64 env
