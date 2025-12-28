@@ -1,19 +1,5 @@
-import { useEffect, useState } from "react";
-import type { User } from "firebase/auth";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/firebase";
-
+// Authentication removed: provide a simple no-op stub so the app builds without Firebase.
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  return { user, loading };
+  // Return a stable shape used by components: no user signed in and not loading.
+  return { user: null, loading: false, signIn: async () => {}, signOut: async () => {} };
 }
